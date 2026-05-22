@@ -40,7 +40,7 @@ from HybridCEKappaLoss import HybridCEKappaLoss, get_alpha
 
 CSV_PATH = r"C:\Users\ohwow\Desktop\DL\train.csv"
 IMAGE_DIR = r"C:\Users\ohwow\Desktop\DL\processed_train_images"
-CHECKPOINT_PATH = r"C:\Users\ohwow\Desktop\DL\convnext\convnext_best.pth"
+CHECKPOINT_PATH = r"C:\Users\ohwow\Desktop\DL\Checkpoints"
 
 IMG_SIZE = 512
 BATCH_SIZE = 8
@@ -242,7 +242,7 @@ if __name__ == "__main__":
         alpha=1.0,                       # start in pure-CE warmup
         class_weights=class_weights,
         label_smoothing=LABEL_SMOOTHING,
-    )
+    ).to(DEVICE)                         # moves WeightedKappaLoss.weights buffer to GPU
 
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY,
@@ -252,6 +252,9 @@ if __name__ == "__main__":
     # -------------------------
     # Training loop
     # -------------------------
+    os.makedirs(CHECKPOINT_PATH, exist_ok=True)
+    best_ckpt_file = os.path.join(CHECKPOINT_PATH, "convnext_best.pth")
+
     best_val_qwk = -1.0
     for epoch in range(EPOCHS):
         # CRITICAL: update alpha each epoch -- without this the loss is pure CE.
@@ -284,8 +287,8 @@ if __name__ == "__main__":
                     "val_qwk": val_qwk,
                     "val_acc": val_acc,
                 },
-                CHECKPOINT_PATH,
+                best_ckpt_file,
             )
-            print(f"  -> new best, saved to {CHECKPOINT_PATH}")
+            print(f"  -> new best, saved to {best_ckpt_file}")
 
     print(f"done. best val QWK = {best_val_qwk:.4f}")
