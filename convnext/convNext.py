@@ -31,6 +31,7 @@ from sklearn.utils.class_weight import compute_class_weight
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from tqdm import tqdm
 
 from HybridCEKappaLoss import HybridCEKappaLoss, get_alpha
 
@@ -123,12 +124,14 @@ class CustomDataset(Dataset):
 # Train / Validate helpers
 # =========================
 
-def train_one_epoch(model, loader, criterion, optimizer, scheduler, device):
+def train_one_epoch(model, loader, criterion, optimizer, scheduler, device, epoch, total_epochs):
     model.train()
     total_loss = 0.0
+    seen = 0
     preds_all, labels_all = [], []
 
-    for images, labels in loader:
+    pbar = tqdm(loader, desc=f"Epoch {epoch+1}/{total_epochs} [train]", leave=False)
+    for images, labels in pbar:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
 
@@ -140,8 +143,11 @@ def train_one_epoch(model, loader, criterion, optimizer, scheduler, device):
         optimizer.step()
 
         total_loss += loss.item() * images.size(0)
+        seen += images.size(0)
         preds_all.extend(logits.argmax(dim=1).detach().cpu().numpy())
         labels_all.extend(labels.detach().cpu().numpy())
+
+        pbar.set_postfix(loss=f"{total_loss/seen:.4f}")
 
     scheduler.step()
     avg_loss = total_loss / len(loader.dataset)
@@ -151,10 +157,11 @@ def train_one_epoch(model, loader, criterion, optimizer, scheduler, device):
 
 
 @torch.no_grad()
-def validate(model, loader, device):
+def validate(model, loader, device, epoch, total_epochs):
     model.eval()
     preds_all, labels_all = [], []
-    for images, labels in loader:
+    pbar = tqdm(loader, desc=f"Epoch {epoch+1}/{total_epochs} [ val ]", leave=False)
+    for images, labels in pbar:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
         logits = model(images)
@@ -267,8 +274,9 @@ if __name__ == "__main__":
 
         train_loss, train_acc, train_qwk = train_one_epoch(
             model, train_loader, criterion, optimizer, scheduler, DEVICE,
+            epoch, EPOCHS,
         )
-        val_acc, val_qwk = validate(model, val_loader, DEVICE)
+        val_acc, val_qwk = validate(model, val_loader, DEVICE, epoch, EPOCHS)
 
         current_lr = optimizer.param_groups[0]["lr"]
         print(
