@@ -1,0 +1,28 @@
+# --- APTOS data (download from Kaggle, do NOT commit) ---
+processed_train_images/
+processed_test_images/
+*.zip
+train.csv
+test.csv
+
+# --- model checkpoints ---
+Checkpoints/
+*.pth
+*.pt
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- jupyter ---
+.ipynb_checkpoints/
