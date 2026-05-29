@@ -39,20 +39,20 @@ from HybridCEKappaLoss import HybridCEKappaLoss, get_alpha
 # Config
 # =========================
 
-CSV_PATH = r"C:\Users\ohwow\Desktop\DL\train.csv"
-IMAGE_DIR = r"C:\Users\ohwow\Desktop\DL\processed_train_images"
-CHECKPOINT_PATH = r"C:\Users\ohwow\Desktop\DL\Checkpoints"
+CSV_PATH = "train.csv"
+IMAGE_DIR = "train_images_resized"
+CHECKPOINT_PATH = "Checkpoints"
 
-IMG_SIZE = 512
+IMG_SIZE = 256
 BATCH_SIZE = 8
-EPOCHS = 30                # aligned with get_alpha(total_epochs=30) default
+EPOCHS = 16                # aligned with get_alpha(total_epochs=30) default
 WARMUP_EPOCHS = 5          # CE-only warmup; matches get_alpha default
-LR = 1e-4                  # AdamW with cosine; 1e-5 was far too low for 30 epochs
-WEIGHT_DECAY = 1e-4
+LR = 1.5e-4                  # AdamW with cosine; 1e-5 was far too low for 30 epochs
+WEIGHT_DECAY = 1.8e-4
 GRAD_CLIP = 1.0
 LABEL_SMOOTHING = 0.05
 
-NUM_WORKERS = 0            # bump on Linux; Windows + Jupyter often needs 0
+NUM_WORKERS = 2            # bump on Linux; Windows + Jupyter often needs 0
 SEED = 42
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,9 +72,12 @@ train_transform = A.Compose([
     A.Resize(IMG_SIZE, IMG_SIZE),
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
-    A.ShiftScaleRotate(
-        shift_limit=0.05, scale_limit=0.1, rotate_limit=30,
-        border_mode=0, p=0.7,
+    A.Affine(
+        scale=(0.9, 1.1),
+        translate_percent=(-0.05, 0.05),
+        rotate=(-30, 30),
+        border_mode=0,
+        p=0.7,
     ),
     A.RandomBrightnessContrast(
         brightness_limit=0.2, contrast_limit=0.2, p=0.5,
@@ -83,7 +86,10 @@ train_transform = A.Compose([
         hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.5,
     ),
     A.CoarseDropout(
-        max_holes=8, max_height=32, max_width=32, p=0.3,
+        num_holes_range=(1, 8),
+        hole_height_range=(8, 32),
+        hole_width_range=(8, 32), 
+        p=0.3,
     ),
     A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ToTensorV2(),
